@@ -4,7 +4,7 @@
 `include "UART_RX.v"
 
 module testbench();
-  parameter c_CLOCK_PERIOD_NS = 50;
+  parameter c_CLOCK_PERIOD_NS = 20;
   parameter c_CLKS_PER_BIT    = 434;
   //parameter c_BIT_PERIOD      = 8600; // 1/115200
   
