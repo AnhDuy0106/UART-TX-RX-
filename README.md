@@ -1,4 +1,5 @@
 About UART((Universal Asynchronous Receiver Transmitter) AND KIT DE2
+
 UART is a serial communication interface popular in embedded and microcontroller applications. The DE2 (DE2 Development and Education Board) is an FPGA (Field Programmable Gate Array) development kit that uses the Altera (now Intel) Cyclone II chip, which is commonly used in embedded system education and development.
 
 
