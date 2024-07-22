@@ -1,0 +1,156 @@
+module UART_TOP(
+    input  [7:0]  in_data,
+    input         data_we,
+    input         brg_we,
+    input         data_en,
+    input         brg_en,
+    input         i_reset,
+    input         CLOCK_50,
+    input         i_start,
+    input         UART_RX,
+    output        UART_TX,
+    output reg [6:0] HEX0, HEX1,
+    output [7:0] out_led,
+    output [7:0] led
+);
+
+    // TX signal
+    wire       tx_active;
+    wire       tx_done;
+    wire [7:0] tx_data;
+    wire       tx_fifo_empty;
+    wire       tx_fifo_full;
+    // RX signal
+    wire       rx_dv;
+    wire [7:0] rx_data;
+    wire       rx_fifo_empty;
+    wire       rx_fifo_full;
+    // Baud signal
+    wire       tick; 
+    wire [7:0] brg_reg;
+    // Power signal
+    wire       enter_sleep;
+
+    // Instantiate TX FIFO
+    fifo #(.DATA_WIDTH(8), .DEPTH(16)) tx_fifo (
+        .clk(CLOCK_50),
+        .rst_n(~i_reset),
+        .wr_en(data_we & ~tx_fifo_full),
+        .rd_en(tx_done),
+        .data_in(in_data),
+        .data_out(tx_data),
+        .full(tx_fifo_full),
+        .empty(tx_fifo_empty)
+    );
+
+    // Instantiate RX FIFO
+    fifo #(.DATA_WIDTH(8), .DEPTH(16)) rx_fifo (
+        .clk(CLOCK_50),
+        .rst_n(~i_reset),
+        .wr_en(rx_dv & ~rx_fifo_full),
+        .rd_en(data_en & ~rx_fifo_empty),
+        .data_in(rx_data),
+        .data_out(out_data),
+        .full(rx_fifo_full),
+        .empty(rx_fifo_empty)
+    );
+
+    // Instantiate UART_TX module
+    UART_TX #(.TICK_PER_BIT(16)) uart_tx_inst (
+        .i_enable(data_en),
+        .i_Clock(CLOCK_50),
+        .i_start(i_start),
+        .i_data(tx_data),
+        .i_reset(i_reset),
+        .sample_tick(tick),
+        .o_TX_Active(tx_active),
+        .o_TX(UART_TX),
+        .o_TX_Done(tx_done)
+    );
+	 
+    // Instantiate UART_RX module
+    UART_RX #(.TICK_PER_BIT (16)) uart_rx_inst (
+        .i_Clock(CLOCK_50),
+        .i_RX(UART_RX),
+        .i_reset(i_reset),
+        .o_RX_DV(rx_dv),
+        .sample_tick(tick),
+        .o_RX_Data(rx_data)
+    );
+	
+    // Power manager
+    power_manager pw(
+        .i_Clock(CLOCK_50),
+        .i_reset(i_reset),
+        .TX_Active(tx_active),
+        .enter_sleep(enter_sleep)
+    );
+	 
+    // Baud rate generator
+    Baud_rate baud_rate (
+        .i_Clock(CLOCK_50),
+        .i_reset(i_reset),
+        .i_enable(brg_en),
+        .brg_reg(brg_reg),
+        .tick(tick)
+    );
+
+    // Write interface
+    write_interface write_intf (
+        .i_Clock(CLOCK_50),
+        .i_reset(i_reset),
+        .brg_we(brg_we),
+        .data_we(data_we),
+        .i_data(in_data),
+        .brg_reg(brg_reg),
+        .data_out(tx_data)  // Dữ liệu đầu ra của write_interface đi vào FIFO
+    );
+
+    always @(*) begin
+        case (rx_data[3:0])
+            4'h0: HEX0 = 7'b1000000;
+            4'h1: HEX0 = 7'b1111001;
+            4'h2: HEX0 = 7'b0100100;
+            4'h3: HEX0 = 7'b0110000;
+            4'h4: HEX0 = 7'b0011001;
+            4'h5: HEX0 = 7'b0010010;
+            4'h6: HEX0 = 7'b0000010;
+            4'h7: HEX0 = 7'b1111000;
+            4'h8: HEX0 = 7'b0000000;
+            4'h9: HEX0 = 7'b0010000;
+            4'hA: HEX0 = 7'b0001000;
+            4'hB: HEX0 = 7'b0000011;
+            4'hC: HEX0 = 7'b1000110;
+            4'hD: HEX0 = 7'b0100001;
+            4'hE: HEX0 = 7'b0000110;
+            4'hF: HEX0 = 7'b0001110;
+            default: HEX0 = 7'b1111111; 
+        endcase
+    end
+
+    always @(*) begin
+        case (rx_data[7:4])
+            4'h0: HEX1 = 7'b1000000;
+            4'h1: HEX1 = 7'b1111001;
+            4'h2: HEX1 = 7'b0100100;
+            4'h3: HEX1 = 7'b0110000;
+            4'h4: HEX1 = 7'b0011001;
+            4'h5: HEX1 = 7'b0010010;
+            4'h6: HEX1 = 7'b0000010;
+            4'h7: HEX1 = 7'b1111000;
+            4'h8: HEX1 = 7'b0000000;
+            4'h9: HEX1 = 7'b0010000;
+            4'hA: HEX1 = 7'b0001000;
+            4'hB: HEX1 = 7'b0000011;
+            4'hC: HEX1 = 7'b1000110;
+            4'hD: HEX1 = 7'b0100001;
+            4'hE: HEX1 = 7'b0000110;
+            4'hF: HEX1 = 7'b0001110;
+            default: HEX1 = 7'b1111111; 
+        endcase
+    end
+
+   assign out_led = in_data;
+   assign led = enter_sleep ? 8'b11111111 : 8'b00000000;
+
+endmodule
